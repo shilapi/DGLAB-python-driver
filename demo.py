@@ -1,21 +1,27 @@
-from bleak import BleakScanner
+# Description: This is a demo script to show how to use the pydglab library to interact with the DGLab device.
+
 import asyncio
 import logging
-import sys
 
 import pydglab
+from pydglab import model
 
 logging.basicConfig(format='%(module)s [%(levelname)s]: %(message)s', level=logging.DEBUG)
 
 
 async def _():
     dglab_instance = pydglab.dglab()
-    await dglab_instance.create()
-    await dglab_instance.get_batterylevel()
+    try:
+        await dglab_instance.create()
+    except TimeoutError:
+        logging.error("Timeout, retrying...")
+        await dglab_instance.create()
     await dglab_instance.get_strength()
     await dglab_instance.set_wave_sync(5, 95, 2, 5, 95, 2)
+    await dglab_instance.set_wave(20, 100, 2, model.ChannelA)
     await dglab_instance.set_strength(50, 50)
     await dglab_instance.get_batterylevel()
     await dglab_instance.get_strength()
+    await dglab_instance.close()
 
 asyncio.run(_())
