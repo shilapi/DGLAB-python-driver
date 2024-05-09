@@ -73,16 +73,25 @@ class dglab(object):
         self.coyote.ChannelB.strength = strengthB
         r = await set_strength_(self.client, self.coyote)
         logger.debug(f"Set strength response: {r}")
-        return r
+        return self.coyote.ChannelA.strength, self.coyote.ChannelB.strength
 
 
     async def set_wave(self, waveX: int, waveY: int, waveZ: int, channel: ChannelA | ChannelB) -> None:
-        channel.waveX = waveX
-        channel.waveY = waveY
-        channel.waveZ = waveZ
+        if channel is ChannelA:
+            self.coyote.ChannelA.waveX = waveX
+            self.coyote.ChannelA.waveY = waveY
+            self.coyote.ChannelA.waveZ = waveZ
+            channel = self.coyote.ChannelA
+        elif channel is ChannelB:
+            self.coyote.ChannelB.waveX = waveX
+            self.coyote.ChannelB.waveY = waveY
+            self.coyote.ChannelB.waveZ = waveZ
+            channel = self.coyote.ChannelB
+        else:
+            raise TypeError("Channel must be ChannelA or ChannelB")
         r = await set_wave_(self.client, channel)
         logger.debug(f"Set wave response: {r}")
-        return r
+        return channel
 
 
     async def set_wave_sync(self, waveX_A: int, waveY_A: int, waveZ_A: int, waveX_B: int, waveY_B: int, waveZ_B: int) -> None:
@@ -94,7 +103,7 @@ class dglab(object):
         self.coyote.ChannelB.waveZ = waveZ_B
         r = await set_wave_sync_(self.client, self.coyote)
         logger.debug(f"Set wave sync response: {r}")
-        return r
+        return self.coyote.ChannelA, self.coyote.ChannelB
 
 
 
