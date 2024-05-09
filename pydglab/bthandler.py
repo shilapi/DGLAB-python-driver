@@ -33,7 +33,8 @@ async def get_batterylevel_(client: BleakClient):
 
 async def get_strength_(client: BleakClient):
     r = await client.read_gatt_char(CoyoteV2.characteristicEStimPower)
-    return r
+    r = BitArray(r).bin
+    return int(r[-11:], 2), int(r[-22:-11], 2)
 
 
 async def set_strength_(client: BleakClient, value: Coyote):

@@ -62,7 +62,6 @@ class dglab(object):
 
     async def get_strength(self) -> Tuple[int, int]:
         value = await get_strength_(self.client)
-        value = value
         logger.debug(f"Received strength: A: {value[0] / 7}, B: {value[1] / 7}")
         self.coyote.ChannelA.strength = int(value[0] / 7)
         self.coyote.ChannelB.strength = int(value[1] / 7)
