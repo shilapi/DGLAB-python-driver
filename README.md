@@ -9,3 +9,5 @@
  **CAUTION: This module is still under development. Think before use.**
 
  Check demo.py for more info.
+
+ 目前仅支持郊狼2.0，3.0的支持将在之后更新。
