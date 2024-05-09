@@ -1,4 +1,4 @@
-import logging, os, sys
+import logging, os
 
 LOGFORMAT = '%(module)s [%(levelname)s]: %(message)s'
 

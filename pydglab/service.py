@@ -1,7 +1,6 @@
 import logging
-import asyncio
 from bleak import BleakClient
-from typing import Tuple, List
+from typing import Tuple
 from pydglab.model import *
 from pydglab.uuid import *
 from pydglab.bthandler import *
