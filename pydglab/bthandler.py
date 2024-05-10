@@ -34,7 +34,7 @@ async def get_batterylevel_(client: BleakClient, characteristics: CoyoteV2 | Coy
 async def get_strength_(client: BleakClient, characteristics: CoyoteV2 | CoyoteV3):
     r = await client.read_gatt_char(characteristics.characteristicEStimPower)
     r = BitArray(r).bin
-    return int(r[-11:], 2), int(r[-22:-11], 2)
+    return int(r[-11:], 2) / 7, int(r[-22:-11], 2) / 7
 
 
 async def set_strength_(client: BleakClient, value: Coyote, characteristics: CoyoteV2 | CoyoteV3):
@@ -44,7 +44,7 @@ async def set_strength_(client: BleakClient, value: Coyote, characteristics: Coy
     array = bytearray(BitArray(bin=binArray).tobytes())
     
     r = await client.write_gatt_char(characteristics.characteristicEStimPower, array)
-    return r
+    return value.ChannelB.strength * 7, value.ChannelA.strength * 7
 
 
 async def set_wave_(client: BleakClient, value: ChannelA | ChannelB, characteristics: CoyoteV2 | CoyoteV3):
@@ -53,7 +53,7 @@ async def set_wave_(client: BleakClient, value: ChannelA | ChannelB, characteris
     array = bytearray(BitArray(bin=binArray).tobytes())
 
     r = await client.write_gatt_char(characteristics.characteristicEStimA if type(value) is ChannelA else characteristics.characteristicEStimB, array)
-    return r
+    return value.waveX, value.waveY, value.waveZ
 
 
 async def set_wave_sync_(client: BleakClient, value: Coyote, characteristics: CoyoteV2 | CoyoteV3):
@@ -65,4 +65,4 @@ async def set_wave_sync_(client: BleakClient, value: Coyote, characteristics: Co
     arrayB = bytearray(BitArray(bin=binArrayB).tobytes())
     
     r = await client.write_gatt_char(characteristics.characteristicEStimA, arrayA), await client.write_gatt_char(characteristics.characteristicEStimB, arrayB)
-    return r
+    return (value.ChannelA.waveX, value.ChannelA.waveY, value.ChannelA.waveZ), (value.ChannelB.waveX, value.ChannelB.waveY, value.ChannelB.waveZ)

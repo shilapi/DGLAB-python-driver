@@ -58,6 +58,8 @@ class dglab(object):
         await self.set_wave_sync(0, 0, 0, 0, 0, 0)
         await self.set_strength(0, 0)
         
+        self.keep_wave_task = asyncio.create_task(self._keep_wave())
+        
         return self
 
 
@@ -76,9 +78,9 @@ class dglab(object):
 
     async def get_strength(self) -> Tuple[int, int]:
         value = await get_strength_(self.client, self.characteristics)
-        logger.debug(f"Received strength: A: {value[0] / 7}, B: {value[1] / 7}")
-        self.coyote.ChannelA.strength = int(value[0] / 7)
-        self.coyote.ChannelB.strength = int(value[1] / 7)
+        logger.debug(f"Received strength: A: {value[0]}, B: {value[1]}")
+        self.coyote.ChannelA.strength = int(value[0])
+        self.coyote.ChannelB.strength = int(value[1])
         return self.coyote.ChannelA.strength, self.coyote.ChannelB.strength
 
 
@@ -120,7 +122,7 @@ class dglab(object):
         return self.coyote.ChannelA, self.coyote.ChannelB
 
 
-    async def keep_wave(self) -> None:
+    async def _keep_wave(self) -> None:
         while True:
             r = await set_wave_sync_(self.client, self.coyote, self.characteristics)
             logger.debug(f"Set wave sync response: {r}")
@@ -132,5 +134,10 @@ class dglab(object):
 
 
     async def close(self):
+        self.keep_wave_task.cancel()
+        try:
+            await self.keep_wave_task
+        except asyncio.CancelledError:
+            pass
         await self.client.disconnect()
         return None

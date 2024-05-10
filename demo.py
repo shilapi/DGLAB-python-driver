@@ -21,15 +21,7 @@ async def _():
     await dglab_instance.set_wave_sync(5, 95, 2, 5, 95, 2)
     await dglab_instance.get_batterylevel()
     await dglab_instance.get_strength()
-
-    t = asyncio.gather(dglab_instance.keep_wave())
-    
     await asyncio.sleep(2)
-    t.cancel()
-    try:
-        await t
-    except asyncio.CancelledError:
-        pass
     await dglab_instance.close()
 
 asyncio.run(_())
