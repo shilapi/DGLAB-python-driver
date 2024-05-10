@@ -26,37 +26,37 @@ async def scan_():
     return sorted(dglab_v2, key=lambda device: device[1])[0][0]
 
 
-async def get_batterylevel_(client: BleakClient):
-    r = await client.read_gatt_char(CoyoteV2.characteristicBattery)
+async def get_batterylevel_(client: BleakClient, characteristics: CoyoteV2 | CoyoteV3):
+    r = await client.read_gatt_char(characteristics.characteristicBattery)
     return r
 
 
-async def get_strength_(client: BleakClient):
-    r = await client.read_gatt_char(CoyoteV2.characteristicEStimPower)
+async def get_strength_(client: BleakClient, characteristics: CoyoteV2 | CoyoteV3):
+    r = await client.read_gatt_char(characteristics.characteristicEStimPower)
     r = BitArray(r).bin
     return int(r[-11:], 2), int(r[-22:-11], 2)
 
 
-async def set_strength_(client: BleakClient, value: Coyote):
+async def set_strength_(client: BleakClient, value: Coyote, characteristics: CoyoteV2 | CoyoteV3):
     # Create a byte array with the strength values.
     # The values are multiplied by 7 to convert them to the correct range.
     binArray = '0b00'+'{0:011b}'.format(value.ChannelB.strength * 7)+'{0:011b}'.format(value.ChannelA.strength * 7)
     array = bytearray(BitArray(bin=binArray).tobytes())
     
-    r = await client.write_gatt_char(CoyoteV2.characteristicEStimPower, array)
+    r = await client.write_gatt_char(characteristics.characteristicEStimPower, array)
     return r
 
 
-async def set_wave_(client: BleakClient, value: ChannelA | ChannelB):
+async def set_wave_(client: BleakClient, value: ChannelA | ChannelB, characteristics: CoyoteV2 | CoyoteV3):
     # Create a byte array with the wave values.
     binArray = '0b0000'+'{0:05b}'.format(value.waveZ)+'{0:010b}'.format(value.waveY)+'{0:05b}'.format(value.waveX)
     array = bytearray(BitArray(bin=binArray).tobytes())
 
-    r = await client.write_gatt_char(CoyoteV2.characteristicEStimA if type(value) is ChannelA else CoyoteV2.characteristicEStimB, array)
+    r = await client.write_gatt_char(characteristics.characteristicEStimA if type(value) is ChannelA else characteristics.characteristicEStimB, array)
     return r
 
 
-async def set_wave_sync_(client: BleakClient, value: Coyote):
+async def set_wave_sync_(client: BleakClient, value: Coyote, characteristics: CoyoteV2 | CoyoteV3):
     # Create a byte array with the wave values.
     binArrayA = '0b0000'+'{0:05b}'.format(value.ChannelA.waveZ)+'{0:010b}'.format(value.ChannelA.waveY)+'{0:05b}'.format(value.ChannelA.waveX)
     arrayA = bytearray(BitArray(bin=binArrayA).tobytes())
@@ -64,5 +64,5 @@ async def set_wave_sync_(client: BleakClient, value: Coyote):
     binArrayB = '0b0000'+'{0:05b}'.format(value.ChannelB.waveZ)+'{0:010b}'.format(value.ChannelB.waveY)+'{0:05b}'.format(value.ChannelB.waveX)
     arrayB = bytearray(BitArray(bin=binArrayB).tobytes())
     
-    r = await client.write_gatt_char(CoyoteV2.characteristicEStimA, arrayA), await client.write_gatt_char(CoyoteV2.characteristicEStimB, arrayB)
+    r = await client.write_gatt_char(characteristics.characteristicEStimA, arrayA), await client.write_gatt_char(characteristics.characteristicEStimB, arrayB)
     return r
