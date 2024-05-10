@@ -51,6 +51,9 @@ class dglab(object):
         else:
             raise Exception("Unknown device (你自己看看你连的是什么jb设备)")
         
+        self.channelA_wave_set: list[tuple[int, int, int]] = []
+        self.channelB_wave_set: list[tuple[int, int, int]] = []
+        
         # Initialize self.coyote
         await self.get_batterylevel()
         await self.get_strength()
@@ -58,7 +61,7 @@ class dglab(object):
         await self.set_wave_sync(0, 0, 0, 0, 0, 0)
         await self.set_strength(0, 0)
         
-        self.keep_wave_task = asyncio.create_task(self._keep_wave())
+        self.wave_tasks = asyncio.gather(self._keep_wave(), self._set_channelA_wave_set(), self._set_channelB_wave_set())
         
         return self
 
@@ -92,25 +95,46 @@ class dglab(object):
         return self.coyote.ChannelA.strength, self.coyote.ChannelB.strength
 
 
-    async def set_wave(self, waveX: int, waveY: int, waveZ: int, channel: ChannelA | ChannelB) -> None:
+    async def set_wave_set(self, wave_set: list[tuple[int, int, int]], channel: ChannelA | ChannelB) -> None:
         if channel is ChannelA:
-            self.coyote.ChannelA.waveX = waveX
-            self.coyote.ChannelA.waveY = waveY
-            self.coyote.ChannelA.waveZ = waveZ
-            channel = self.coyote.ChannelA
+            self.channelA_wave_set = wave_set
         elif channel is ChannelB:
-            self.coyote.ChannelB.waveX = waveX
-            self.coyote.ChannelB.waveY = waveY
-            self.coyote.ChannelB.waveZ = waveZ
-            channel = self.coyote.ChannelB
-        else:
-            raise TypeError("Channel must be ChannelA or ChannelB")
-        r = await set_wave_(self.client, channel, self.characteristics)
-        logger.debug(f"Set wave response: {r}")
-        return channel
+            self.channelB_wave_set = wave_set
+        return None
+        
 
 
-    async def set_wave_sync(self, waveX_A: int, waveY_A: int, waveZ_A: int, waveX_B: int, waveY_B: int, waveZ_B: int) -> None:
+    async def _set_channelA_wave_set(self) -> None:
+        try:
+            while True:
+                for wave in self.channelA_wave_set:
+                    self.coyote.ChannelA.waveX = wave[0]
+                    self.coyote.ChannelA.waveY = wave[1]
+                    self.coyote.ChannelA.waveZ = wave[2]
+                    await asyncio.sleep(0.1)
+        except asyncio.exceptions.CancelledError:
+            pass
+
+
+    async def _set_channelB_wave_set(self) -> None:
+        try:
+            while True:
+                for wave in self.channelB_wave_set:
+                    self.coyote.ChannelB.waveX = wave[0]
+                    self.coyote.ChannelB.waveY = wave[1]
+                    self.coyote.ChannelB.waveZ = wave[2]
+                    await asyncio.sleep(0.1)
+        except asyncio.exceptions.CancelledError:
+            pass
+
+
+    async def set_wave_sync(self, waveX_A: int, waveY_A: int, waveZ_A: int, waveX_B: int, waveY_B: int, waveZ_B: int) -> Tuple[int, int, int, int, int, int]:
+        self.channelA_wave_set = [(waveX_A, waveY_A, waveZ_A)]
+        self.channelB_wave_set = [(waveX_B, waveY_B, waveZ_B)]
+        return (waveX_A, waveY_A, waveZ_A), (waveX_B, waveY_B, waveZ_B)
+
+
+    async def _set_wave_sync(self, waveX_A: int, waveY_A: int, waveZ_A: int, waveX_B: int, waveY_B: int, waveZ_B: int) -> None:
         self.coyote.ChannelA.waveX = waveX_A
         self.coyote.ChannelA.waveY = waveY_A
         self.coyote.ChannelA.waveZ = waveZ_A
@@ -134,10 +158,10 @@ class dglab(object):
 
 
     async def close(self):
-        self.keep_wave_task.cancel()
         try:
-            await self.keep_wave_task
-        except asyncio.CancelledError:
+            self.wave_tasks.cancel()
+            await self.wave_tasks
+        except asyncio.CancelledError or asyncio.exceptions.InvalidStateError:
             pass
         await self.client.disconnect()
         return None
