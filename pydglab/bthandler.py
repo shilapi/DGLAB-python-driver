@@ -9,15 +9,27 @@ from pydglab.uuid import *
 logger = logging.getLogger(__name__)
 
 
-async def scan_():
+async def scan():
+    """
+    Scan for DGLAB v2.0 devices and return a list of tuples with the address and the RSSI of the devices found.
+
+    Returns:
+        List[Tuple[str, int]]: (address, RSSI)
+    """
     devices = await BleakScanner().discover(return_adv=True)
-    dglab_v2: List[Tuple] = []
+    dglab_v2: List[Tuple[str, int]] = []
     for i, j in devices.values():
         if j.local_name == CoyoteV2.name and i.address is not None:
             logger.info(f"Found DGLAB v2.0 {i.address}")
             dglab_v2.append((i.address, j.rssi))
     if not dglab_v2:
         logger.error("No DGLAB v2.0 found")
+    return dglab_v2
+
+
+async def scan_():
+    dglab_v2 = await scan()
+    if not dglab_v2:
         raise Exception("No DGLAB v2.0 found")
     if len(dglab_v2) > 1:
         logger.warning("Multiple DGLAB v2.0 found, chosing the closest one")

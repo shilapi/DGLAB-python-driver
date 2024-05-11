@@ -12,4 +12,4 @@ if bool(os.environ.get("BLEAK_LOGGING", False)):
     
 from .service import dglab
 from .model import *
-from .bthandler import scan_ as scan
+from .bthandler import scan

@@ -6,10 +6,11 @@ import logging
 import pydglab
 from pydglab import model
 
-logging.basicConfig(format='%(module)s [%(levelname)s]: %(message)s', level=logging.DEBUG)
+logging.basicConfig(format='%(module)s [%(levelname)s]: %(message)s', level=logging.INFO)
 
 
 async def _():
+    await pydglab.scan()
     dglab_instance = pydglab.dglab()
     try:
         await dglab_instance.create()
