@@ -17,7 +17,7 @@ async def _():
         logging.error("Timeout, retrying...")
         await dglab_instance.create()
     await dglab_instance.get_strength()
-    await dglab_instance.set_strength(1, 1)
+    await dglab_instance.set_strength_sync(1, 1)
     await dglab_instance.set_wave_sync(0,0,0,0,0,0)
     await dglab_instance.set_wave_set(model.Wave_set["Going_Faster"], model.ChannelA)
     await dglab_instance.get_batterylevel()
