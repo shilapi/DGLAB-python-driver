@@ -7,6 +7,7 @@ from pydglab.bthandler import *
 
 logger = logging.getLogger(__name__)
 
+
 class dglab(object):
     coyote = Coyote()
 
@@ -14,8 +15,7 @@ class dglab(object):
         self.address = address
         return None
 
-
-    async def create(self) -> 'dglab':
+    async def create(self) -> "dglab":
         """
         建立郊狼连接并初始化。
         Creates a connection to the DGLAB device and initialize.
@@ -26,26 +26,26 @@ class dglab(object):
         Raises:
             Exception: If the device is not supported or if an unknown device is connected.
         """
-        
-        if self.address is None: 
+
+        if self.address is None:
             # If address is not provided, scan for it.
             self.address = await scan_()
-        
+
         # Connect to the device.
         logger.debug(f"Connecting to {self.address}")
         self.client = BleakClient(self.address, timeout=20.0)
         await self.client.connect()
-        
+
         # Wait for a second to allow service discovery to complete
         await asyncio.sleep(1)
-        
+
         # Check if the device is valid.
         services = self.client.services
         service = [service.uuid for service in services]
         logger.debug(f"Got services: {str(service)}")
         if CoyoteV2.serviceBattery in service and CoyoteV2.serviceEStim in service:
             logger.info("Connected to DGLAB v2.0")
-            
+
             # Update BleakGATTCharacteristic into characteristics list, to optimize performence.
             self.characteristics = CoyoteV2
             logger.debug(f"Got characteristics: {str(self.characteristics)}")
@@ -58,30 +58,35 @@ class dglab(object):
                     self.characteristics.characteristicEStimA = i
                 elif i.uuid == self.characteristics.characteristicEStimB:
                     self.characteristics.characteristicEStimB = i
-            
+
         elif CoyoteV3.serviceWrite in service and CoyoteV3.serviceNotify in service:
             raise Exception("DGLAB v3.0 is not supported")
         else:
-            raise Exception("Unknown device (你自己看看你连的是什么jb设备)") # Sorry for my language.
-        
+            raise Exception(
+                "Unknown device (你自己看看你连的是什么jb设备)"
+            )  # Sorry for my language.
+
         self.channelA_wave_set: list[tuple[int, int, int]] = []
         self.channelB_wave_set: list[tuple[int, int, int]] = []
-        
+
         # Initialize self.coyote
         await self.get_batterylevel()
         await self.get_strength()
-        
+
         await self.set_wave_sync(0, 0, 0, 0, 0, 0)
         await self.set_strength(0, 0)
-        
+
         # Start the wave tasks, to keep the device functioning.
-        self.wave_tasks = asyncio.gather(self._keep_wave(), self._channelA_wave_set_handler(), self._channelB_wave_set_handler())
-        
+        self.wave_tasks = asyncio.gather(
+            self._keep_wave(),
+            self._channelA_wave_set_handler(),
+            self._channelB_wave_set_handler(),
+        )
+
         return self
 
-
     @classmethod
-    async def from_address(cls, address: str) -> 'dglab':
+    async def from_address(cls, address: str) -> "dglab":
         """
         从指定的地址创建一个新的郊狼实例，在需要同时连接多个设备时格外好用。
         Creates a new instance of the 'dglab' class using the specified address.
@@ -93,9 +98,8 @@ class dglab(object):
             dglab: An instance of the 'dglab' class.
 
         """
-        
-        return cls(address)
 
+        return cls(address)
 
     async def get_batterylevel(self) -> int:
         """
@@ -105,13 +109,12 @@ class dglab(object):
         Returns:
             int: The battery level as an integer value.
         """
-        
+
         value = await get_batterylevel_(self.client, self.characteristics)
         value = value[0]
         logger.debug(f"Received battery level: {value}")
         self.coyote.Battery = int(value)
         return self.coyote.Battery
-
 
     async def get_strength(self) -> Tuple[int, int]:
         """
@@ -127,7 +130,6 @@ class dglab(object):
         self.coyote.ChannelB.strength = int(value[1])
         return self.coyote.ChannelA.strength, self.coyote.ChannelB.strength
 
-
     async def set_strength(self, strength: int, channel: ChannelA | ChannelB) -> None:
         """
         设置电压强度。
@@ -141,15 +143,18 @@ class dglab(object):
         Returns:
             int: 电压强度
         """
-        
+
         if channel is ChannelA:
             self.coyote.ChannelA.strength = strength
         elif channel is ChannelB:
             self.coyote.ChannelB.strength = strength
         r = await set_strength_(self.client, self.coyote, self.characteristics)
         logger.debug(f"Set strength response: {r}")
-        return self.coyote.ChannelA.strength if channel is ChannelA else self.coyote.ChannelB.strength
-
+        return (
+            self.coyote.ChannelA.strength
+            if channel is ChannelA
+            else self.coyote.ChannelB.strength
+        )
 
     async def set_strength_sync(self, strengthA: int, strengthB: int) -> None:
         """
@@ -170,7 +175,6 @@ class dglab(object):
         logger.debug(f"Set strength response: {r}")
         return self.coyote.ChannelA.strength, self.coyote.ChannelB.strength
 
-
     """
     How wave set works:
     1. Set the wave set for channel A and channel B.
@@ -179,8 +183,9 @@ class dglab(object):
     self.coyote.ChannelN.waveN.
     """
 
-
-    async def set_wave_set(self, wave_set: list[tuple[int, int, int]], channel: ChannelA | ChannelB) -> None:
+    async def set_wave_set(
+        self, wave_set: list[tuple[int, int, int]], channel: ChannelA | ChannelB
+    ) -> None:
         """
         设置波形组，也就是所谓“不断变化的波形”。
         Set the wave set for the device.
@@ -198,8 +203,11 @@ class dglab(object):
             self.channelB_wave_set = wave_set
         return None
 
-
-    async def set_wave_set_sync(self, wave_setA: list[tuple[int, int, int]], wave_setB: list[tuple[int, int, int]]) -> None:
+    async def set_wave_set_sync(
+        self,
+        wave_setA: list[tuple[int, int, int]],
+        wave_setB: list[tuple[int, int, int]],
+    ) -> None:
         """
         同步设置波形组。
         Set the wave set for the device synchronously.
@@ -215,11 +223,10 @@ class dglab(object):
         self.channelB_wave_set = wave_setB
         return None
 
-
     async def _channelA_wave_set_handler(self) -> None:
         """
         Do not use this function directly.
-        
+
         Yep this is how wave set works :)
         PR if you have a better solution.
         """
@@ -233,11 +240,10 @@ class dglab(object):
         except asyncio.exceptions.CancelledError:
             pass
 
-
     async def _channelB_wave_set_handler(self) -> None:
         """
         Do not use this function directly.
-        
+
         Yep this is how wave set works :)
         PR if you have a better solution.
         """
@@ -251,7 +257,6 @@ class dglab(object):
         except asyncio.exceptions.CancelledError:
             pass
 
-
     """
     How set_wave works:
     Basically, it will generate a wave set with only one wave,
@@ -259,8 +264,9 @@ class dglab(object):
     All the wave changes will be applied to the device by wave_set.
     """
 
-
-    async def set_wave(self, waveX: int, waveY: int, waveZ: int, channel: ChannelA | ChannelB) -> Tuple[int, int, int]:
+    async def set_wave(
+        self, waveX: int, waveY: int, waveZ: int, channel: ChannelA | ChannelB
+    ) -> Tuple[int, int, int]:
         """
         设置波形。
         枯燥，乏味，感觉不如。。。
@@ -281,12 +287,19 @@ class dglab(object):
             self.channelB_wave_set = [(waveX, waveY, waveZ)]
         return waveX, waveY, waveZ
 
-
-    async def set_wave_sync(self, waveX_A: int, waveY_A: int, waveZ_A: int, waveX_B: int, waveY_B: int, waveZ_B: int) -> Tuple[int, int, int, int, int, int]:
+    async def set_wave_sync(
+        self,
+        waveX_A: int,
+        waveY_A: int,
+        waveZ_A: int,
+        waveX_B: int,
+        waveY_B: int,
+        waveZ_B: int,
+    ) -> Tuple[int, int, int, int, int, int]:
         """
         同步设置波形。
         Set the wave for the device synchronously.
-        
+
         Args:
             waveX_A (int): 通道A，连续发出X个脉冲，每个脉冲持续1ms
             waveY_A (int): 通道A，发出脉冲后停止Y个周期，每个周期持续1ms
@@ -302,7 +315,6 @@ class dglab(object):
         self.channelB_wave_set = [(waveX_B, waveY_B, waveZ_B)]
         return (waveX_A, waveY_A, waveZ_A), (waveX_B, waveY_B, waveZ_B)
 
-
     async def _keep_wave(self) -> None:
         """
         Don't use this function directly.
@@ -315,7 +327,6 @@ class dglab(object):
             except asyncio.exceptions.CancelledError:
                 break
         return None
-
 
     async def close(self):
         """
