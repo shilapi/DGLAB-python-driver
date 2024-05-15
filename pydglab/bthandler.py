@@ -45,8 +45,11 @@ async def get_batterylevel_(client: BleakClient, characteristics: CoyoteV2 | Coy
 
 async def get_strength_(client: BleakClient, characteristics: CoyoteV2 | CoyoteV3):
     r = await client.read_gatt_char(characteristics.characteristicEStimPower)
+    #logger.debug(f"Received strenth bytes: {r.hex()} , which is {r}")
+    r.reverse()
     r = BitArray(r).bin
-    return int(r[-11:], 2) / 7, int(r[-22:-11], 2) / 7
+    #logger.debug(f"Received strenth bytes after decoding: {r}")
+    return int(r[-22:-11], 2)/7, int(r[-11:], 2)/7
 
 
 async def set_strength_(
@@ -54,15 +57,19 @@ async def set_strength_(
 ):
     # Create a byte array with the strength values.
     # The values are multiplied by 7 to convert them to the correct range.
-    binArray = (
-        "0b00"
-        + "{0:011b}".format(value.ChannelB.strength * 7)
-        + "{0:011b}".format(value.ChannelA.strength * 7)
-    )
-    array = bytearray(BitArray(bin=binArray).tobytes())
+    strengthA = int(value.ChannelA.strength) * 7
+    strengthB = int(value.ChannelB.strength) * 7
+    if value.ChannelA.strength is None or value.ChannelA.strength < 0 or value.ChannelA.strength > 2047:
+        value.ChannelA.strength = 0
+    if value.ChannelB.strength is None or value.ChannelB.strength < 0 or value.ChannelB.strength > 2047:
+        value.ChannelB.strength = 0
+    
+    array = ((strengthA << 11) + strengthB).to_bytes(3, byteorder='little')
+    
+    #logger.debug(f"Sending bytes: {array.hex()} , which is {array}")
 
-    r = await client.write_gatt_char(characteristics.characteristicEStimPower, array)
-    return value.ChannelB.strength * 7, value.ChannelA.strength * 7
+    r = await client.write_gatt_char(characteristics.characteristicEStimPower, bytearray(array), response=False)
+    return value.ChannelA.strength, value.ChannelB.strength
 
 
 async def set_wave_(
@@ -71,13 +78,9 @@ async def set_wave_(
     characteristics: CoyoteV2 | CoyoteV3,
 ):
     # Create a byte array with the wave values.
-    binArray = (
-        "0b0000"
-        + "{0:05b}".format(value.waveZ)
-        + "{0:010b}".format(value.waveY)
-        + "{0:05b}".format(value.waveX)
-    )
-    array = bytearray(BitArray(bin=binArray).tobytes())
+    array = ((value.waveX << 15) + (value.waveY << 5) + value.waveX).to_bytes(3, byteorder='little')
+    
+    #logger.debug(f"Sending bytes: {array.hex()} , which is {array}")
 
     r = await client.write_gatt_char(
         (
@@ -85,6 +88,7 @@ async def set_wave_(
             if type(value) is ChannelA
             else characteristics.characteristicEStimB
         ),
-        array,
+        bytearray(array),
+        response=False
     )
     return value.waveX, value.waveY, value.waveZ
