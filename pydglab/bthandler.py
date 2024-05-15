@@ -45,11 +45,11 @@ async def get_batterylevel_(client: BleakClient, characteristics: CoyoteV2 | Coy
 
 async def get_strength_(client: BleakClient, characteristics: CoyoteV2 | CoyoteV3):
     r = await client.read_gatt_char(characteristics.characteristicEStimPower)
-    #logger.debug(f"Received strenth bytes: {r.hex()} , which is {r}")
+    # logger.debug(f"Received strenth bytes: {r.hex()} , which is {r}")
     r.reverse()
     r = BitArray(r).bin
-    #logger.debug(f"Received strenth bytes after decoding: {r}")
-    return int(r[-22:-11], 2)/7, int(r[-11:], 2)/7
+    # logger.debug(f"Received strenth bytes after decoding: {r}")
+    return int(r[-22:-11], 2) / 7, int(r[-11:], 2) / 7
 
 
 async def set_strength_(
@@ -59,16 +59,26 @@ async def set_strength_(
     # The values are multiplied by 7 to convert them to the correct range.
     strengthA = int(value.ChannelA.strength) * 7
     strengthB = int(value.ChannelB.strength) * 7
-    if value.ChannelA.strength is None or value.ChannelA.strength < 0 or value.ChannelA.strength > 2047:
+    if (
+        value.ChannelA.strength is None
+        or value.ChannelA.strength < 0
+        or value.ChannelA.strength > 2047
+    ):
         value.ChannelA.strength = 0
-    if value.ChannelB.strength is None or value.ChannelB.strength < 0 or value.ChannelB.strength > 2047:
+    if (
+        value.ChannelB.strength is None
+        or value.ChannelB.strength < 0
+        or value.ChannelB.strength > 2047
+    ):
         value.ChannelB.strength = 0
-    
-    array = ((strengthA << 11) + strengthB).to_bytes(3, byteorder='little')
-    
-    #logger.debug(f"Sending bytes: {array.hex()} , which is {array}")
 
-    r = await client.write_gatt_char(characteristics.characteristicEStimPower, bytearray(array), response=False)
+    array = ((strengthA << 11) + strengthB).to_bytes(3, byteorder="little")
+
+    # logger.debug(f"Sending bytes: {array.hex()} , which is {array}")
+
+    r = await client.write_gatt_char(
+        characteristics.characteristicEStimPower, bytearray(array), response=False
+    )
     return value.ChannelA.strength, value.ChannelB.strength
 
 
@@ -78,9 +88,11 @@ async def set_wave_(
     characteristics: CoyoteV2 | CoyoteV3,
 ):
     # Create a byte array with the wave values.
-    array = ((value.waveX << 15) + (value.waveY << 5) + value.waveX).to_bytes(3, byteorder='little')
-    
-    #logger.debug(f"Sending bytes: {array.hex()} , which is {array}")
+    array = ((value.waveX << 15) + (value.waveY << 5) + value.waveX).to_bytes(
+        3, byteorder="little"
+    )
+
+    # logger.debug(f"Sending bytes: {array.hex()} , which is {array}")
 
     r = await client.write_gatt_char(
         (
@@ -89,6 +101,6 @@ async def set_wave_(
             else characteristics.characteristicEStimB
         ),
         bytearray(array),
-        response=False
+        response=False,
     )
     return value.waveX, value.waveY, value.waveZ
