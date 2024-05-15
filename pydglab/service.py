@@ -74,7 +74,7 @@ class dglab_v3(object):
 
         # Start the wave tasks, to keep the device functioning.
         self.wave_tasks = asyncio.gather(
-            self._keep_wave(),
+            self._retainer(),
             self._channelA_wave_set_handler(),
             self._channelB_wave_set_handler(),
         )
@@ -138,8 +138,6 @@ class dglab_v3(object):
             self.coyote.ChannelA.strength = strength
         elif channel is ChannelB:
             self.coyote.ChannelB.strength = strength
-        r = await write_strenth_(self.client, self.coyote, self.characteristics)
-        logger.debug(f"Set strength response: {r}")
         return (
             self.coyote.ChannelA.strength
             if channel is ChannelA
@@ -161,8 +159,6 @@ class dglab_v3(object):
         """
         self.coyote.ChannelA.strength = strengthA
         self.coyote.ChannelB.strength = strengthB
-        r = await write_strenth_(self.client, self.coyote, self.characteristics)
-        logger.debug(f"Set strength response: {r}")
         return self.coyote.ChannelA.strength, self.coyote.ChannelB.strength
 
     """
@@ -316,20 +312,20 @@ class dglab_v3(object):
         self.channelB_wave_set = [(waveX_B, waveY_B, waveZ_B)]
         return (waveX_A, waveY_A, waveZ_A), (waveX_B, waveY_B, waveZ_B)
 
-    async def _keep_wave(self) -> None:
+    async def _retainer(self) -> None:
         """
         Don't use this function directly.
         """
         while True:
             r = await write_strenth_(self.client, self.coyote, self.characteristics)
-            logger.debug(f"Set wave response: {r}")
+            logger.debug(f"Retainer response: {r}")
             try:
                 await asyncio.sleep(0.1)
             except asyncio.exceptions.CancelledError:
                 break
         return None
 
-    async def close(self):
+    async def close(self) -> None:
         """
         郊狼虽好，可不要贪杯哦。
         Close the connection to the device.
