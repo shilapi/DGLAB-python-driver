@@ -18,9 +18,9 @@
 
 ## 开始之前
 
- **注意：本模块的使用可能伴随着人身安全风险，请确保您在使用前知道自己在做什么。作者对使用本模块造成的一切损失概不负责。**
-
- **CAUTION: The use of this module may be accompanied by personal safety risks, please make sure you know what you're doing before using it. The author is not responsible for any losses caused by the use of this module.**
+> ⚠️ **CAUTION**
+> **本模块的使用可能伴随着人身安全风险，请确保您在使用前知道自己在做什么。作者对使用本模块造成的一切损失概不负责。**
+> **The use of this module may be accompanied by personal safety risks, please make sure you know what you're doing before using it. The author is not responsible for any losses caused by the use of this module.**
 
 ## 快速上手
 
