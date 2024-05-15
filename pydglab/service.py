@@ -1,21 +1,21 @@
 import logging, asyncio
 from bleak import BleakClient
 from typing import Tuple
-from pydglab.model import *
+from pydglab.model_v3 import *
 from pydglab.uuid import *
-from pydglab.bthandler import *
+from pydglab.bthandler_v3 import *
 
 logger = logging.getLogger(__name__)
 
 
-class dglab(object):
+class dglab_v3(object):
     coyote = Coyote()
 
     def __init__(self, address: str = None) -> None:
         self.address = address
         return None
 
-    async def create(self) -> "dglab":
+    async def create(self) -> "dglab_v3":
         """
         建立郊狼连接并初始化。
         Creates a connection to the DGLAB device and initialize.
@@ -44,23 +44,19 @@ class dglab(object):
         service = [service.uuid for service in services]
         logger.debug(f"Got services: {str(service)}")
         if CoyoteV2.serviceBattery in service and CoyoteV2.serviceEStim in service:
-            logger.info("Connected to DGLAB v2.0")
+            raise Exception("Use dglab_v2 instead")
+        elif CoyoteV3.serviceWrite in service and CoyoteV3.serviceNotify in service:
+            logger.info("Connected to DGLAB v3.0")
 
             # Update BleakGATTCharacteristic into characteristics list, to optimize performence.
-            self.characteristics = CoyoteV2
+            self.characteristics = CoyoteV3
             logger.debug(f"Got characteristics: {str(self.characteristics)}")
             for i in self.client.services.characteristics.values():
-                if i.uuid == self.characteristics.characteristicBattery:
-                    self.characteristics.characteristicBattery = i
-                elif i.uuid == self.characteristics.characteristicEStimPower:
-                    self.characteristics.characteristicEStimPower = i
-                elif i.uuid == self.characteristics.characteristicEStimA:
-                    self.characteristics.characteristicEStimA = i
-                elif i.uuid == self.characteristics.characteristicEStimB:
-                    self.characteristics.characteristicEStimB = i
+                if i.uuid == self.characteristics.characteristicWrite:
+                    self.characteristics.characteristicWrite = i
+                elif i.uuid == self.characteristics.characteristicNotify:
+                    self.characteristics.characteristicNotify = i
 
-        elif CoyoteV3.serviceWrite in service and CoyoteV3.serviceNotify in service:
-            raise Exception("DGLAB v3.0 is not supported")
         else:
             raise Exception(
                 "Unknown device (你自己看看你连的是什么jb设备)"
@@ -69,10 +65,10 @@ class dglab(object):
         self.channelA_wave_set: list[tuple[int, int, int]] = []
         self.channelB_wave_set: list[tuple[int, int, int]] = []
 
-        # Initialize self.coyote
-        await self.get_batterylevel()
-        await self.get_strength()
+        # Initialize notify
+        await notify_(self.client, self.characteristics, self.notify_callback)
 
+        # Initialize self.coyote
         await self.set_wave_sync(0, 0, 0, 0, 0, 0)
         await self.set_strength(0, 0)
 
@@ -86,7 +82,7 @@ class dglab(object):
         return self
 
     @classmethod
-    async def from_address(cls, address: str) -> "dglab":
+    async def from_address(cls, address: str) -> "dglab_v3":
         """
         从指定的地址创建一个新的郊狼实例，在需要同时连接多个设备时格外好用。
         Creates a new instance of the 'dglab' class using the specified address.
@@ -101,20 +97,18 @@ class dglab(object):
 
         return cls(address)
 
-    async def get_batterylevel(self) -> int:
-        """
-        读取郊狼设备剩余电量，小心没电导致的寸止哦：）
-        Retrieves the battery level from the device.
-
-        Returns:
-            int: The battery level as an integer value.
-        """
-
-        value = await get_batterylevel_(self.client, self.characteristics)
-        value = value[0]
-        logger.debug(f"Received battery level: {value}")
-        self.coyote.Battery = int(value)
-        return self.coyote.Battery
+    async def notify_callback(self, sender: BleakGATTCharacteristic, data: bytearray):
+        logger.debug(f"{sender}: {data}")
+        if data[0] == 0xB1:
+            self.coyote.ChannelA.strength = int(data[2])
+            self.coyote.ChannelB.strength = int(data[3])
+        if data[0] == 0xBE:
+            self.coyote.ChannelA.limit = int(data[1])
+            self.coyote.ChannelB.limit = int(data[2])
+            self.coyote.ChannelA.coefficientFrequency = int(data[3])
+            self.coyote.ChannelB.coefficientFrequency = int(data[4])
+            self.coyote.ChannelA.coefficientStrenth = int(data[5])
+            self.coyote.ChannelB.coefficientStrenth = int(data[6])
 
     async def get_strength(self) -> Tuple[int, int]:
         """
@@ -124,10 +118,6 @@ class dglab(object):
         Returns:
             Tuple[int, int]: 通道A强度，通道B强度
         """
-        value = await get_strength_(self.client, self.characteristics)
-        logger.debug(f"Received strength: A: {value[0]}, B: {value[1]}")
-        self.coyote.ChannelA.strength = int(value[0])
-        self.coyote.ChannelB.strength = int(value[1])
         return self.coyote.ChannelA.strength, self.coyote.ChannelB.strength
 
     async def set_strength(self, strength: int, channel: ChannelA | ChannelB) -> None:
@@ -148,7 +138,7 @@ class dglab(object):
             self.coyote.ChannelA.strength = strength
         elif channel is ChannelB:
             self.coyote.ChannelB.strength = strength
-        r = await set_strength_(self.client, self.coyote, self.characteristics)
+        r = await write_strenth_(self.client, self.coyote, self.characteristics)
         logger.debug(f"Set strength response: {r}")
         return (
             self.coyote.ChannelA.strength
@@ -171,7 +161,7 @@ class dglab(object):
         """
         self.coyote.ChannelA.strength = strengthA
         self.coyote.ChannelB.strength = strengthB
-        r = await set_strength_(self.client, self.coyote, self.characteristics)
+        r = await write_strenth_(self.client, self.coyote, self.characteristics)
         logger.debug(f"Set strength response: {r}")
         return self.coyote.ChannelA.strength, self.coyote.ChannelB.strength
 
@@ -223,6 +213,17 @@ class dglab(object):
         self.channelB_wave_set = wave_setB
         return None
 
+    def waveset_converter(
+        self, wave_set: list[tuple[int, int, int]]
+    ) -> tuple[int, int]:
+        """
+        Convert the wave set to the correct format.
+        """
+        freq = int((((wave_set[0] + wave_set[1]) - 10) / 990) * 230 + 10)
+        strenth = int(wave_set[2] * 5)
+
+        return freq, strenth
+
     async def _channelA_wave_set_handler(self) -> None:
         """
         Do not use this function directly.
@@ -233,9 +234,9 @@ class dglab(object):
         try:
             while True:
                 for wave in self.channelA_wave_set:
-                    self.coyote.ChannelA.waveX = wave[0]
-                    self.coyote.ChannelA.waveY = wave[1]
-                    self.coyote.ChannelA.waveZ = wave[2]
+                    wave = self.waveset_converter(wave)
+                    self.coyote.ChannelA.wave = wave[0]
+                    self.coyote.ChannelA.waveStrenth = wave[1]
                     await asyncio.sleep(0.1)
         except asyncio.exceptions.CancelledError:
             pass
@@ -250,9 +251,9 @@ class dglab(object):
         try:
             while True:
                 for wave in self.channelB_wave_set:
-                    self.coyote.ChannelB.waveX = wave[0]
-                    self.coyote.ChannelB.waveY = wave[1]
-                    self.coyote.ChannelB.waveZ = wave[2]
+                    wave = self.waveset_converter(wave)
+                    self.coyote.ChannelB.wave = wave[0]
+                    self.coyote.ChannelB.waveStrenth = wave[1]
                     await asyncio.sleep(0.1)
         except asyncio.exceptions.CancelledError:
             pass
@@ -320,7 +321,7 @@ class dglab(object):
         Don't use this function directly.
         """
         while True:
-            r = await set_wave_sync_(self.client, self.coyote, self.characteristics)
+            r = await write_strenth_(self.client, self.coyote, self.characteristics)
             logger.debug(f"Set wave response: {r}")
             try:
                 await asyncio.sleep(0.1)

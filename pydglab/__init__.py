@@ -10,6 +10,6 @@ if bool(os.environ.get("BLEAK_LOGGING", False)):
     handler.setFormatter(logging.Formatter(fmt=LOGFORMAT))
     _logger.addHandler(handler)
 
-from .service import dglab
-from .model import *
-from .bthandler import scan
+from .service import dglab_v3
+from .model_v3 import *
+from .bthandler_v3 import scan
