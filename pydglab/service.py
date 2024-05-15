@@ -320,7 +320,9 @@ class dglab(object):
         Don't use this function directly.
         """
         while True:
-            r = await set_wave_sync_(self.client, self.coyote, self.characteristics)
+            r = await set_wave_(
+                self.client, self.coyote.ChannelA, self.characteristics
+            ), await set_wave_(self.client, self.coyote.ChannelB, self.characteristics)
             logger.debug(f"Set wave response: {r}")
             try:
                 await asyncio.sleep(0.1)
