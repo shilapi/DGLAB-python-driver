@@ -4,6 +4,7 @@ from typing import Tuple
 from pydglab.model import *
 from pydglab.uuid import *
 from pydglab.bthandler import *
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -313,20 +314,44 @@ class dglab(object):
         """
         self.channelA_wave_set = [(waveX_A, waveY_A, waveZ_A)]
         self.channelB_wave_set = [(waveX_B, waveY_B, waveZ_B)]
+        r = await set_wave_(
+            self.client, self.coyote.ChannelA, self.characteristics
+        ), await set_wave_(self.client, self.coyote.ChannelB, self.characteristics)
         return (waveX_A, waveY_A, waveZ_A), (waveX_B, waveY_B, waveZ_B)
 
     async def _keep_wave(self) -> None:
         """
         Don't use this function directly.
         """
+        last_time = time.time()
+        last_time_local = time.time()
         while True:
-            r = await set_wave_(
-                self.client, self.coyote.ChannelA, self.characteristics
-            ), await set_wave_(self.client, self.coyote.ChannelB, self.characteristics)
-            logger.debug(f"Set wave response: {r}")
             try:
-                await asyncio.sleep(0.1)
+                # logger.debug(f"Time elapsed: {time.time() - last_time}")
+                if time.time() - last_time >= 0.1:
+                    
+                    # Record time for loop
+                    last_time = time.time()
+                    
+                    # Refresh A and B channel by turn
+                    last_refreshing = ChannelA
+                    
+                    if self.coyote.ChannelA.strength == 0:
+                        r = (0,0,0), await set_wave_(self.client, self.coyote.ChannelB, self.characteristics)
+                    elif self.coyote.ChannelB.strength == 0:
+                        r = await set_wave_(self.client, self.coyote.ChannelA, self.characteristics), (0,0,0)
+                    else:
+                        if last_refreshing == ChannelA:
+                            r = (0,0,0), await set_wave_(self.client, self.coyote.ChannelB, self.characteristics)
+                            last_refreshing = ChannelB
+                        elif last_refreshing == ChannelB:
+                            r = await set_wave_(self.client, self.coyote.ChannelA, self.characteristics), (0,0,0)
+                            last_refreshing = ChannelA
+                    logger.debug(f"Set wave response: {r}")
+                    logger.debug(f"Time elapsed: {time.time() - last_time_local}")
+                    last_time_local = time.time()
             except asyncio.exceptions.CancelledError:
+                logger.error("Cancelled error")
                 break
         return None
 
