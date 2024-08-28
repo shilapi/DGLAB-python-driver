@@ -88,7 +88,7 @@ async def set_wave_(
     characteristics: CoyoteV2 | CoyoteV3,
 ):
     # Create a byte array with the wave values.
-    array = ((value.waveX << 15) + (value.waveY << 5) + value.waveX).to_bytes(
+    array = ((value.waveZ << 15) + (value.waveY << 5) + value.waveX).to_bytes(
         3, byteorder="little"
     )
 
