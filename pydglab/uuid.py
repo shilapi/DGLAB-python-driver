@@ -14,10 +14,10 @@ class CoyoteV2(object):
     characteristicEStimPower: Union[str, BleakGATTCharacteristic] = (
         "955a1504-0fe2-f5aa-a094-84b8d4f3e8ad"
     )
-    characteristicEStimA: Union[str, BleakGATTCharacteristic] = (
+    characteristicEStimB: Union[str, BleakGATTCharacteristic] = (
         "955a1505-0fe2-f5aa-a094-84b8d4f3e8ad"
     )
-    characteristicEStimB: Union[str, BleakGATTCharacteristic] = (
+    characteristicEStimA: Union[str, BleakGATTCharacteristic] = (
         "955a1506-0fe2-f5aa-a094-84b8d4f3e8ad"
     )
 
