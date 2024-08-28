@@ -57,8 +57,8 @@ async def set_strength_(
 ):
     # Create a byte array with the strength values.
     # The values are multiplied by 7 to convert them to the correct range.
-    strengthA = int(value.ChannelA.strength) * 7
-    strengthB = int(value.ChannelB.strength) * 7
+    strengthA = int(value.ChannelA.strength) * 11
+    strengthB = int(value.ChannelB.strength) * 11
     if (
         value.ChannelA.strength is None
         or value.ChannelA.strength < 0
