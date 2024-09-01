@@ -49,14 +49,14 @@ async def get_strength_(client: BleakClient, characteristics: CoyoteV2 | CoyoteV
     r.reverse()
     r = BitArray(r).bin
     # logger.debug(f"Received strenth bytes after decoding: {r}")
-    return int(r[-22:-11], 2) / 7, int(r[-11:], 2) / 7
+    return int(r[-22:-11], 2) / 11, int(r[-11:], 2) / 11
 
 
 async def set_strength_(
     client: BleakClient, value: Coyote, characteristics: CoyoteV2 | CoyoteV3
 ):
     # Create a byte array with the strength values.
-    # The values are multiplied by 7 to convert them to the correct range.
+    # The values are multiplied by 11 to convert them to the correct range.
     strengthA = int(value.ChannelA.strength) * 11
     strengthB = int(value.ChannelB.strength) * 11
     if (
