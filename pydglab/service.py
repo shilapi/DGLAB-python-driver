@@ -325,6 +325,7 @@ class dglab(object):
         """
         last_time = time.time()
         last_time_local = time.time()
+        last_refreshing = ChannelA
         while True:
             try:
                 # logger.debug(f"Time elapsed: {time.time() - last_time}")
@@ -334,8 +335,7 @@ class dglab(object):
                     last_time = time.time()
                     
                     # Refresh A and B channel by turn
-                    last_refreshing = ChannelA
-                    
+
                     if self.coyote.ChannelA.strength == 0:
                         r = (0,0,0), await set_wave_(self.client, self.coyote.ChannelB, self.characteristics)
                     elif self.coyote.ChannelB.strength == 0:
