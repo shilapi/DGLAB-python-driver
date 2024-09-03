@@ -1,17 +1,17 @@
 import logging, asyncio, time
 from bleak import BleakClient
 from typing import Tuple
-from pydglab.model import *
-from pydglab.model_v3 import *
+import pydglab.model_v2 as model_v2
+import pydglab.model_v3 as model_v3
 from pydglab.uuid import *
-import pydglab.bthandler as v2
+import pydglab.bthandler_v2 as v2
 import pydglab.bthandler_v3 as v3
 
 logger = logging.getLogger(__name__)
 
 
 class dglab(object):
-    coyote = Coyote()
+    coyote = model_v2.Coyote()
 
     def __init__(self, address: str = None) -> None:
         self.address = address
@@ -81,8 +81,6 @@ class dglab(object):
         # Start the wave tasks, to keep the device functioning.
         self.wave_tasks = asyncio.gather(
             self._keep_wave(),
-            self._channelA_wave_set_handler(),
-            self._channelB_wave_set_handler(),
         )
 
         return self
@@ -132,7 +130,7 @@ class dglab(object):
         self.coyote.ChannelB.strength = int(value[1])
         return self.coyote.ChannelA.strength, self.coyote.ChannelB.strength
 
-    async def set_strength(self, strength: int, channel: ChannelA | ChannelB) -> None:
+    async def set_strength(self, strength: int, channel: model_v2.ChannelA | model_v2.ChannelB) -> None:
         """
         设置电压强度。
         额外设置这个函数用于单独调整强度只是为了和设置波形的函数保持一致罢了。
@@ -146,15 +144,15 @@ class dglab(object):
             int: 电压强度
         """
 
-        if channel is ChannelA:
+        if channel is model_v2.ChannelA:
             self.coyote.ChannelA.strength = strength
-        elif channel is ChannelB:
+        elif channel is model_v2.ChannelB:
             self.coyote.ChannelB.strength = strength
         r = await v2.set_strength_(self.client, self.coyote, self.characteristics)
         logger.debug(f"Set strength response: {r}")
         return (
             self.coyote.ChannelA.strength
-            if channel is ChannelA
+            if channel is model_v2.ChannelA
             else self.coyote.ChannelB.strength
         )
 
@@ -186,7 +184,7 @@ class dglab(object):
     """
 
     async def set_wave_set(
-        self, wave_set: list[tuple[int, int, int]], channel: ChannelA | ChannelB
+        self, wave_set: list[tuple[int, int, int]], channel: model_v2.ChannelA | model_v2.ChannelB
     ) -> None:
         """
         设置波形组，也就是所谓“不断变化的波形”。
@@ -199,9 +197,9 @@ class dglab(object):
         Returns:
             None: None
         """
-        if channel is ChannelA:
+        if channel is model_v2.ChannelA:
             self.channelA_wave_set = wave_set
-        elif channel is ChannelB:
+        elif channel is model_v2.ChannelB:
             self.channelB_wave_set = wave_set
         return None
 
@@ -225,40 +223,6 @@ class dglab(object):
         self.channelB_wave_set = wave_setB
         return None
 
-    async def _channelA_wave_set_handler(self) -> None:
-        """
-        Do not use this function directly.
-
-        Yep this is how wave set works :)
-        PR if you have a better solution.
-        """
-        try:
-            while True:
-                for wave in self.channelA_wave_set:
-                    self.coyote.ChannelA.waveX = wave[0]
-                    self.coyote.ChannelA.waveY = wave[1]
-                    self.coyote.ChannelA.waveZ = wave[2]
-                    await asyncio.sleep(0.1)
-        except asyncio.exceptions.CancelledError:
-            pass
-
-    async def _channelB_wave_set_handler(self) -> None:
-        """
-        Do not use this function directly.
-
-        Yep this is how wave set works :)
-        PR if you have a better solution.
-        """
-        try:
-            while True:
-                for wave in self.channelB_wave_set:
-                    self.coyote.ChannelB.waveX = wave[0]
-                    self.coyote.ChannelB.waveY = wave[1]
-                    self.coyote.ChannelB.waveZ = wave[2]
-                    await asyncio.sleep(0.1)
-        except asyncio.exceptions.CancelledError:
-            pass
-
     """
     How set_wave works:
     Basically, it will generate a wave set with only one wave,
@@ -267,7 +231,7 @@ class dglab(object):
     """
 
     async def set_wave(
-        self, waveX: int, waveY: int, waveZ: int, channel: ChannelA | ChannelB
+        self, waveX: int, waveY: int, waveZ: int, channel: model_v2.ChannelA | model_v2.ChannelB
     ) -> Tuple[int, int, int]:
         """
         设置波形。
@@ -283,9 +247,9 @@ class dglab(object):
         Returns:
             Tuple[int, int, int]: 波形
         """
-        if channel is ChannelA:
+        if channel is model_v2.ChannelA:
             self.channelA_wave_set = [(waveX, waveY, waveZ)]
-        elif channel is ChannelB:
+        elif channel is model_v2.ChannelB:
             self.channelB_wave_set = [(waveX, waveY, waveZ)]
         return waveX, waveY, waveZ
 
@@ -320,13 +284,43 @@ class dglab(object):
         ), await v2.set_wave_(self.client, self.coyote.ChannelB, self.characteristics)
         return (waveX_A, waveY_A, waveZ_A), (waveX_B, waveY_B, waveZ_B)
 
+    def _channelA_wave_set_handler(self):
+        """
+        Do not use this function directly.
+
+        Yep this is how wave set works :)
+        PR if you have a better solution.
+        """
+        while True:
+            for wave in self.channelA_wave_set:
+                self.coyote.ChannelA.waveX = wave[0]
+                self.coyote.ChannelA.waveY = wave[1]
+                self.coyote.ChannelA.waveZ = wave[2]
+                yield (None)
+
+    def _channelB_wave_set_handler(self):
+        """
+        Do not use this function directly.
+
+        Yep this is how wave set works :)
+        PR if you have a better solution.
+        """
+        while True:
+            for wave in self.channelB_wave_set:
+                self.coyote.ChannelB.waveX = wave[0]
+                self.coyote.ChannelB.waveY = wave[1]
+                self.coyote.ChannelB.waveZ = wave[2]
+                yield (None)
+
     async def _keep_wave(self) -> None:
         """
         Don't use this function directly.
         """
         last_time = time.time()
-        last_time_local = time.time()
-        last_refreshing = ChannelA
+
+        ChannelA_keeping = self._channelA_wave_set_handler()
+        ChannelB_keeping = self._channelB_wave_set_handler()
+
         while True:
             try:
                 # logger.debug(f"Time elapsed: {time.time() - last_time}")
@@ -335,30 +329,14 @@ class dglab(object):
                     # Record time for loop
                     last_time = time.time()
 
-                    # Refresh A and B channel by turn
-
-                    if self.coyote.ChannelA.strength == 0:
-                        r = (0, 0, 0), await v2.set_wave_(
-                            self.client, self.coyote.ChannelB, self.characteristics
-                        )
-                    elif self.coyote.ChannelB.strength == 0:
-                        r = await v2.set_wave_(
-                            self.client, self.coyote.ChannelA, self.characteristics
-                        ), (0, 0, 0)
-                    else:
-                        if last_refreshing == ChannelA:
-                            r = (0, 0, 0), await v2.set_wave_(
-                                self.client, self.coyote.ChannelB, self.characteristics
-                            )
-                            last_refreshing = ChannelB
-                        elif last_refreshing == ChannelB:
-                            r = await v2.set_wave_(
-                                self.client, self.coyote.ChannelA, self.characteristics
-                            ), (0, 0, 0)
-                            last_refreshing = ChannelA
+                    r = await v2.set_wave_(
+                        self.client, self.coyote.ChannelA, self.characteristics
+                    ), await v2.set_wave_(
+                        self.client, self.coyote.ChannelB, self.characteristics
+                    )
                     logger.debug(f"Set wave response: {r}")
-                    logger.debug(f"Time elapsed: {time.time() - last_time_local}")
-                    last_time_local = time.time()
+                    next(ChannelA_keeping)
+                    next(ChannelB_keeping)
             except asyncio.exceptions.CancelledError:
                 logger.error("Cancelled error")
                 break
@@ -382,7 +360,7 @@ class dglab(object):
 
 
 class dglab_v3(object):
-    coyote = Coyote_v3()
+    coyote = model_v3.Coyote()
 
     def __init__(self, address: str = None) -> None:
         self.address = address
@@ -449,8 +427,8 @@ class dglab_v3(object):
         self.coyote.ChannelA.coefficientFrequency = 100
         self.coyote.ChannelB.coefficientFrequency = 100
 
-        await self.set_coefficient(200, 100, 100, ChannelA)
-        await self.set_coefficient(200, 100, 100, ChannelB)
+        await self.set_coefficient(200, 100, 100, model_v3.ChannelA)
+        await self.set_coefficient(200, 100, 100, model_v3.ChannelB)
         await self.set_wave_sync(0, 0, 0, 0, 0, 0)
         await self.set_strength_sync(0, 0)
 
@@ -502,7 +480,7 @@ class dglab_v3(object):
         """
         return self.coyote.ChannelA.strength, self.coyote.ChannelB.strength
 
-    async def set_strength(self, strength: int, channel: ChannelA | ChannelB) -> None:
+    async def set_strength(self, strength: int, channel: model_v3.ChannelA | model_v3.ChannelB) -> None:
         """
         设置电压强度。
         额外设置这个函数用于单独调整强度只是为了和设置波形的函数保持一致罢了。
@@ -516,13 +494,13 @@ class dglab_v3(object):
             int: 电压强度
         """
 
-        if channel is ChannelA:
+        if channel is model_v3.ChannelA:
             self.coyote.ChannelA.strength = strength
-        elif channel is ChannelB:
+        elif channel is model_v3.ChannelB:
             self.coyote.ChannelB.strength = strength
         return (
             self.coyote.ChannelA.strength
-            if channel is ChannelA
+            if channel is model_v3.ChannelA
             else self.coyote.ChannelB.strength
         )
 
@@ -531,7 +509,7 @@ class dglab_v3(object):
         strength_limit: int,
         strength_coefficient: int,
         frequency_coefficient: int,
-        channel: ChannelA | ChannelB,
+        channel: model_v3.ChannelA | model_v3.ChannelB,
     ) -> None:
         """
         设置强度上线与平衡常数。
@@ -547,11 +525,11 @@ class dglab_v3(object):
             Tuple[int, int, int]: 电压强度上限，强度平衡常数，频率平衡常数
         """
 
-        if channel is ChannelA:
+        if channel is model_v3.ChannelA:
             self.coyote.ChannelA.limit = strength_limit
             self.coyote.ChannelA.coefficientStrenth = strength_coefficient
             self.coyote.ChannelA.coefficientFrequency = frequency_coefficient
-        elif channel is ChannelB:
+        elif channel is model_v3.ChannelB:
             self.coyote.ChannelB.limit = strength_limit
             self.coyote.ChannelB.coefficientStrenth = strength_coefficient
             self.coyote.ChannelB.coefficientFrequency = frequency_coefficient
@@ -564,7 +542,7 @@ class dglab_v3(object):
                 self.coyote.ChannelA.coefficientStrenth,
                 self.coyote.ChannelA.coefficientFrequency,
             )
-            if channel is ChannelA
+            if channel is model_v3.ChannelA
             else (
                 self.coyote.ChannelB.limit,
                 self.coyote.ChannelB.coefficientStrenth,
@@ -598,7 +576,7 @@ class dglab_v3(object):
     """
 
     async def set_wave_set(
-        self, wave_set: list[tuple[int, int, int]], channel: ChannelA | ChannelB
+        self, wave_set: list[tuple[int, int, int]], channel: model_v3.ChannelA | model_v3.ChannelB
     ) -> None:
         """
         设置波形组，也就是所谓“不断变化的波形”。
@@ -611,9 +589,9 @@ class dglab_v3(object):
         Returns:
             None: None
         """
-        if channel is ChannelA:
+        if channel is model_v3.ChannelA:
             self.channelA_wave_set = wave_set
-        elif channel is ChannelB:
+        elif channel is model_v3.ChannelB:
             self.channelB_wave_set = wave_set
         return None
 
@@ -656,7 +634,7 @@ class dglab_v3(object):
     """
 
     async def set_wave(
-        self, waveX: int, waveY: int, waveZ: int, channel: ChannelA | ChannelB
+        self, waveX: int, waveY: int, waveZ: int, channel: model_v3.ChannelA | model_v3.ChannelB
     ) -> Tuple[int, int, int]:
         """
         设置波形。
@@ -672,9 +650,9 @@ class dglab_v3(object):
         Returns:
             Tuple[int, int, int]: 波形
         """
-        if channel is ChannelA:
+        if channel is model_v3.ChannelA:
             self.channelA_wave_set = [(waveX, waveY, waveZ)]
-        elif channel is ChannelB:
+        elif channel is model_v3.ChannelB:
             self.channelB_wave_set = [(waveX, waveY, waveZ)]
         return waveX, waveY, waveZ
 

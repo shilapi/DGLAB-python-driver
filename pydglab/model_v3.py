@@ -21,7 +21,7 @@ class ChannelB(object):
         self.limit: Optional[int] = None
 
 
-class Coyote_v3(object):
+class Coyote(object):
     def __init__(self):
         self.ChannelA: Optional[ChannelA] = ChannelA()
         self.ChannelB: Optional[ChannelB] = ChannelB()

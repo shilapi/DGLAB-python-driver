@@ -21,8 +21,8 @@ class ChannelB(object):
 
 class Coyote(object):
     def __init__(self):
-        self.ChannelA: Optional[ChannelA] = ChannelA()
-        self.ChannelB: Optional[ChannelB] = ChannelB()
+        self.ChannelA: ChannelA = ChannelA()
+        self.ChannelB: ChannelB = ChannelB()
         self.Battery: Optional[int] = None
 
 

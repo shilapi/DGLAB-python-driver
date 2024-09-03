@@ -4,15 +4,15 @@ import asyncio
 import logging
 
 import pydglab
-from pydglab import model
+from pydglab import model_v2
 
 logging.basicConfig(
-    format="%(module)s [%(levelname)s]: %(message)s", level=logging.INFO
+    format="%(module)s [%(levelname)s]: %(message)s", level=logging.DEBUG
 )
 
 
 async def _():
-    await pydglab.scan()
+    #await pydglab.scan()
     dglab_instance = pydglab.dglab()
     try:
         await dglab_instance.create()
@@ -22,9 +22,24 @@ async def _():
     await dglab_instance.get_strength()
     await dglab_instance.set_strength_sync(1, 1)
     await dglab_instance.set_wave_sync(0, 0, 0, 0, 0, 0)
-    await dglab_instance.set_wave_set(model.Wave_set["Going_Faster"], model.ChannelA)
+    await dglab_instance.set_wave_set(model_v2.Wave_set["Going_Faster"], model_v2.ChannelA)
     await dglab_instance.get_batterylevel()
     await dglab_instance.get_strength()
+    await dglab_instance.set_strength_sync(20, 1)
+    await asyncio.sleep(2)
+    await dglab_instance.set_strength_sync(30, 1)
+    await asyncio.sleep(2)
+    await dglab_instance.set_strength_sync(20, 1)
+    await asyncio.sleep(2)
+    await dglab_instance.set_strength_sync(30, 1)
+    await asyncio.sleep(2)
+    await dglab_instance.set_strength_sync(20, 1)
+    await asyncio.sleep(2)
+    await dglab_instance.set_strength_sync(30, 1)
+    await asyncio.sleep(2)
+    await dglab_instance.set_strength_sync(20, 1)
+    await asyncio.sleep(2)
+    await dglab_instance.set_strength_sync(30, 1)
     await asyncio.sleep(2)
     await dglab_instance.close()
 
