@@ -4,26 +4,27 @@ from typing import Optional
 class ChannelA(object):
     def __init__(self):
         self.strength: Optional[int] = None
-        self.wave: Optional[bytearray[int]] = bytearray((0, 0, 0))
-        self.waveX: Optional[int] = self.wave[0]
-        self.waveY: Optional[int] = self.wave[1]
-        self.waveZ: Optional[int] = self.wave[2]
+        self.wave: Optional[list[int]] = [0, 0, 0, 0]
+        self.waveStrenth: Optional[list[int]] = [0, 0, 0, 0]
+        self.coefficientStrenth: Optional[int] = None
+        self.coefficientFrequency: Optional[int] = None
+        self.limit: Optional[int] = None
 
 
 class ChannelB(object):
     def __init__(self):
         self.strength: Optional[int] = None
-        self.wave: Optional[bytearray[int]] = bytearray((0, 0, 0))
-        self.waveX: Optional[int] = self.wave[0]
-        self.waveY: Optional[int] = self.wave[1]
-        self.waveZ: Optional[int] = self.wave[2]
+        self.wave: Optional[list[int]] = [0, 0, 0, 0]
+        self.waveStrenth: Optional[list[int]] = [0, 0, 0, 0]
+        self.coefficientStrenth: Optional[int] = None
+        self.coefficientFrequency: Optional[int] = None
+        self.limit: Optional[int] = None
 
 
-class Coyote(object):
+class Coyote_v3(object):
     def __init__(self):
         self.ChannelA: Optional[ChannelA] = ChannelA()
         self.ChannelB: Optional[ChannelB] = ChannelB()
-        self.Battery: Optional[int] = None
 
 
 Wave_set = {
