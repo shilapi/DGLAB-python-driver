@@ -19,6 +19,8 @@ async def _():
     except TimeoutError:
         logging.error("Timeout, retrying...")
         await dglab_instance.create()
+    await dglab_instance.set_coefficient(100, 100, 100, model_v3.ChannelA)
+    await dglab_instance.set_coefficient(100, 100, 100, model_v3.ChannelB)
     await dglab_instance.get_strength()
     await dglab_instance.set_strength_sync(1, 1)
     await dglab_instance.set_wave_sync(0, 0, 0, 0, 0, 0)

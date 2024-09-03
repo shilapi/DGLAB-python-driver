@@ -1,4 +1,4 @@
-import logging, asyncio
+import logging, asyncio, time
 from bleak import BleakClient
 from typing import Tuple
 from pydglab.model_v3 import *
@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class dglab_v3(object):
-    coyote = Coyote()
+    coyote = Coyote_v3()
 
     def __init__(self, address: str = None) -> None:
         self.address = address
@@ -69,14 +69,21 @@ class dglab_v3(object):
         await notify_(self.client, self.characteristics, self.notify_callback)
 
         # Initialize self.coyote
+        self.coyote.ChannelA.limit = 200
+        self.coyote.ChannelB.limit = 200
+        self.coyote.ChannelA.coefficientStrenth = 100
+        self.coyote.ChannelB.coefficientStrenth = 100
+        self.coyote.ChannelA.coefficientFrequency = 100
+        self.coyote.ChannelB.coefficientFrequency = 100
+        
+        await self.set_coefficient(200, 100, 100, ChannelA)
+        await self.set_coefficient(200, 100, 100, ChannelB)
         await self.set_wave_sync(0, 0, 0, 0, 0, 0)
-        await self.set_strength(0, 0)
+        await self.set_strength_sync(0, 0)
 
         # Start the wave tasks, to keep the device functioning.
         self.wave_tasks = asyncio.gather(
             self._retainer(),
-            self._channelA_wave_set_handler(),
-            self._channelB_wave_set_handler(),
         )
 
         return self
@@ -100,15 +107,17 @@ class dglab_v3(object):
     async def notify_callback(self, sender: BleakGATTCharacteristic, data: bytearray):
         logger.debug(f"{sender}: {data}")
         if data[0] == 0xB1:
-            self.coyote.ChannelA.strength = int(data[2])
-            self.coyote.ChannelB.strength = int(data[3])
+            # self.coyote.ChannelA.strength = int(data[2])
+            # self.coyote.ChannelB.strength = int(data[3])
+            logger.debug(f"Getting bytes(0xB1): {data.hex()} , which is {data}")
         if data[0] == 0xBE:
-            self.coyote.ChannelA.limit = int(data[1])
-            self.coyote.ChannelB.limit = int(data[2])
-            self.coyote.ChannelA.coefficientFrequency = int(data[3])
-            self.coyote.ChannelB.coefficientFrequency = int(data[4])
-            self.coyote.ChannelA.coefficientStrenth = int(data[5])
-            self.coyote.ChannelB.coefficientStrenth = int(data[6])
+            # self.coyote.ChannelA.limit = int(data[1])
+            # self.coyote.ChannelB.limit = int(data[2])
+            # self.coyote.ChannelA.coefficientFrequency = int(data[3])
+            # self.coyote.ChannelB.coefficientFrequency = int(data[4])
+            # self.coyote.ChannelA.coefficientStrenth = int(data[5])
+            # self.coyote.ChannelB.coefficientStrenth = int(data[6])
+            logger.debug(f"Getting bytes(0xBE): {data.hex()} , which is {data}")
 
     async def get_strength(self) -> Tuple[int, int]:
         """
@@ -142,6 +151,38 @@ class dglab_v3(object):
             self.coyote.ChannelA.strength
             if channel is ChannelA
             else self.coyote.ChannelB.strength
+        )
+
+    async def set_coefficient(self, strength_limit: int, strength_coefficient: int, frequency_coefficient: int, channel: ChannelA | ChannelB) -> None:
+        """
+        设置强度上线与平衡常数。
+        Set the strength limit and coefficient of the device.
+
+        Args:
+            strength_limit (int): 电压强度上限
+            strength_coefficient (int): 强度平衡常数
+            frequency_coefficient (int): 频率平衡常数
+            channel (ChannelA | ChannelB): 对手频道
+
+        Returns:
+            Tuple[int, int, int]: 电压强度上限，强度平衡常数，频率平衡常数
+        """
+
+        if channel is ChannelA:
+            self.coyote.ChannelA.limit = strength_limit
+            self.coyote.ChannelA.coefficientStrenth = strength_coefficient
+            self.coyote.ChannelA.coefficientFrequency = frequency_coefficient
+        elif channel is ChannelB:
+            self.coyote.ChannelB.limit = strength_limit
+            self.coyote.ChannelB.coefficientStrenth = strength_coefficient
+            self.coyote.ChannelB.coefficientFrequency = frequency_coefficient
+        
+        await write_coefficient_(self.client, self.coyote, self.characteristics)
+        
+        return (
+            (self.coyote.ChannelA.limit, self.coyote.ChannelA.coefficientStrenth, self.coyote.ChannelA.coefficientFrequency)
+            if channel is ChannelA
+            else (self.coyote.ChannelB.limit, self.coyote.ChannelB.coefficientStrenth, self.coyote.ChannelB.coefficientFrequency)
         )
 
     async def set_strength_sync(self, strengthA: int, strengthB: int) -> None:
@@ -220,40 +261,6 @@ class dglab_v3(object):
 
         return freq, strenth
 
-    async def _channelA_wave_set_handler(self) -> None:
-        """
-        Do not use this function directly.
-
-        Yep this is how wave set works :)
-        PR if you have a better solution.
-        """
-        try:
-            while True:
-                for wave in self.channelA_wave_set:
-                    wave = self.waveset_converter(wave)
-                    self.coyote.ChannelA.wave = wave[0]
-                    self.coyote.ChannelA.waveStrenth = wave[1]
-                    await asyncio.sleep(0.1)
-        except asyncio.exceptions.CancelledError:
-            pass
-
-    async def _channelB_wave_set_handler(self) -> None:
-        """
-        Do not use this function directly.
-
-        Yep this is how wave set works :)
-        PR if you have a better solution.
-        """
-        try:
-            while True:
-                for wave in self.channelB_wave_set:
-                    wave = self.waveset_converter(wave)
-                    self.coyote.ChannelB.wave = wave[0]
-                    self.coyote.ChannelB.waveStrenth = wave[1]
-                    await asyncio.sleep(0.1)
-        except asyncio.exceptions.CancelledError:
-            pass
-
     """
     How set_wave works:
     Basically, it will generate a wave set with only one wave,
@@ -312,17 +319,64 @@ class dglab_v3(object):
         self.channelB_wave_set = [(waveX_B, waveY_B, waveZ_B)]
         return (waveX_A, waveY_A, waveZ_A), (waveX_B, waveY_B, waveZ_B)
 
+    def _channelA_wave_set_handler(self) -> None:
+        """
+        Do not use this function directly.
+
+        Yep this is how wave set works :)
+        PR if you have a better solution.
+        """
+        try:
+            while True:
+                for wave in self.channelA_wave_set:
+                    wave = self.waveset_converter(wave)
+                    self.coyote.ChannelA.wave.insert(0,wave[0])
+                    self.coyote.ChannelA.wave.pop()
+                    self.coyote.ChannelA.waveStrenth.insert(0,wave[1])
+                    self.coyote.ChannelA.waveStrenth.pop()
+                    yield(None)
+        except asyncio.exceptions.CancelledError:
+            pass
+
+    def _channelB_wave_set_handler(self) -> None:
+        """
+        Do not use this function directly.
+
+        Yep this is how wave set works :)
+        PR if you have a better solution.
+        """
+        try:
+            while True:
+                for wave in self.channelB_wave_set:
+                    wave = self.waveset_converter(wave)
+                    self.coyote.ChannelB.wave.insert(0,wave[0])
+                    self.coyote.ChannelB.wave.pop()
+                    self.coyote.ChannelB.waveStrenth.insert(0,wave[1])
+                    self.coyote.ChannelB.waveStrenth.pop()
+                    yield(None)
+        except asyncio.exceptions.CancelledError:
+            pass
+
     async def _retainer(self) -> None:
         """
         Don't use this function directly.
         """
+        ChannelA_keeping = self._channelA_wave_set_handler()
+        ChannelB_keeping = self._channelB_wave_set_handler()
+        
+        last_time = time.time()
+        
         while True:
-            r = await write_strenth_(self.client, self.coyote, self.characteristics)
-            logger.debug(f"Retainer response: {r}")
-            try:
-                await asyncio.sleep(0.1)
-            except asyncio.exceptions.CancelledError:
-                break
+            if time.time() - last_time >= 0.1:
+                
+                # Record time for loop
+                last_time = time.time()
+                logger.debug(f"Using wave: {self.coyote.ChannelA.wave}, {self.coyote.ChannelA.waveStrenth}, {self.coyote.ChannelB.wave}, {self.coyote.ChannelB.waveStrenth}")
+                r = await write_strenth_(self.client, self.coyote, self.characteristics)
+                logger.debug(f"Retainer response: {r}")
+                next(ChannelA_keeping)
+                next(ChannelB_keeping)
+        
         return None
 
     async def close(self) -> None:

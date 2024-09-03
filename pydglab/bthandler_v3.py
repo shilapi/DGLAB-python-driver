@@ -42,7 +42,7 @@ async def notify_(client: BleakClient, characteristics: CoyoteV3, callback: call
     await client.start_notify(characteristics.characteristicNotify, callback)
 
 
-async def write_strenth_(client: BleakClient, value: Coyote, characteristics: CoyoteV3):
+async def write_strenth_(client: BleakClient, value: Coyote_v3, characteristics: CoyoteV3):
     struct = (
         0xB0,
         0b00010000 + 0b00001111,
@@ -57,17 +57,18 @@ async def write_strenth_(client: BleakClient, value: Coyote, characteristics: Co
         tuple(
             item if isinstance(item, int) else subitem
             for item in struct
-            for subitem in (item if isinstance(item, tuple) else (item,))
+            for subitem in (tuple(item) if isinstance(item, list) else (item,))
         )
     )
+    logger.debug(f"Sending bytes: {bytes_.hex()} , which is {bytes_}")
     await client.write_gatt_char(characteristics.characteristicWrite, bytes_)
 
 
 async def write_coefficient_(
-    client: BleakClient, value: Coyote, characteristics: CoyoteV3
+    client: BleakClient, value: Coyote_v3, characteristics: CoyoteV3
 ):
     struct = (
-        0xBE,
+        0xBF,
         value.ChannelA.limit,
         value.ChannelB.limit,
         value.ChannelA.coefficientFrequency,
@@ -82,4 +83,5 @@ async def write_coefficient_(
             for subitem in (item if isinstance(item, tuple) else (item,))
         )
     )
+    logger.debug(f"Sending bytes: {bytes_.hex()} , which is {bytes_}")
     await client.write_gatt_char(characteristics.characteristicWrite, bytes_)
