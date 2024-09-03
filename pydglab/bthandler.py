@@ -104,3 +104,33 @@ async def set_wave_(
         response=False,
     )
     return value.waveX, value.waveY, value.waveZ
+
+
+async def set_wave_sync_(
+    client: BleakClient, value: Coyote, characteristics: CoyoteV2 | CoyoteV3
+):
+    # Create a byte array with the wave values.
+    binArrayA = (
+        "0b0000"
+        + "{0:05b}".format(value.ChannelA.waveZ)
+        + "{0:010b}".format(value.ChannelA.waveY)
+        + "{0:05b}".format(value.ChannelA.waveX)
+    )
+    arrayA = bytearray(BitArray(bin=binArrayA).tobytes())
+
+    binArrayB = (
+        "0b0000"
+        + "{0:05b}".format(value.ChannelB.waveZ)
+        + "{0:010b}".format(value.ChannelB.waveY)
+        + "{0:05b}".format(value.ChannelB.waveX)
+    )
+    arrayB = bytearray(BitArray(bin=binArrayB).tobytes())
+
+    r = await client.write_gatt_char(
+        characteristics.characteristicEStimA, arrayA
+    ), await client.write_gatt_char(characteristics.characteristicEStimB, arrayB)
+    return (value.ChannelA.waveX, value.ChannelA.waveY, value.ChannelA.waveZ), (
+        value.ChannelB.waveX,
+        value.ChannelB.waveY,
+        value.ChannelB.waveZ,
+    )
