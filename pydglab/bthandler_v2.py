@@ -3,7 +3,7 @@ from bleak import BleakClient, BleakScanner
 from typing import Tuple, List
 from bitstring import BitArray
 
-from pydglab.model import *
+from pydglab.model_v2 import *
 from pydglab.uuid import *
 
 logger = logging.getLogger(__name__)
@@ -38,12 +38,12 @@ async def scan_():
     return sorted(dglab_v2, key=lambda device: device[1])[0][0]
 
 
-async def get_batterylevel_(client: BleakClient, characteristics: CoyoteV2 | CoyoteV3):
+async def get_batterylevel_(client: BleakClient, characteristics: CoyoteV2):
     r = await client.read_gatt_char(characteristics.characteristicBattery)
     return r
 
 
-async def get_strength_(client: BleakClient, characteristics: CoyoteV2 | CoyoteV3):
+async def get_strength_(client: BleakClient, characteristics: CoyoteV2):
     r = await client.read_gatt_char(characteristics.characteristicEStimPower)
     # logger.debug(f"Received strenth bytes: {r.hex()} , which is {r}")
     r.reverse()
@@ -53,7 +53,7 @@ async def get_strength_(client: BleakClient, characteristics: CoyoteV2 | CoyoteV
 
 
 async def set_strength_(
-    client: BleakClient, value: Coyote, characteristics: CoyoteV2 | CoyoteV3
+    client: BleakClient, value: Coyote, characteristics: CoyoteV2
 ):
     # Create a byte array with the strength values.
     # The values are multiplied by 11 to convert them to the correct range.
@@ -85,7 +85,7 @@ async def set_strength_(
 async def set_wave_(
     client: BleakClient,
     value: ChannelA | ChannelB,
-    characteristics: CoyoteV2 | CoyoteV3,
+    characteristics: CoyoteV2,
 ):
     # Create a byte array with the wave values.
     array = ((value.waveZ << 15) + (value.waveY << 5) + value.waveX).to_bytes(

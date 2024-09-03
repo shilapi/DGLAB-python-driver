@@ -26,6 +26,8 @@
 
 ## 快速上手
 
+**注意：郊狼2.0与3.0的使用方式并不相同！！！**
+
 ### 安装
 
 ```bash
@@ -34,10 +36,12 @@ pip install pydglab
 
 ### 实例化并开启连接
 
+#### 对于郊狼2.0
+
 ```python
 import asyncio
 import pydglab
-from pydglab import model
+from pydglab import model_v2
 
 async def _():
     dglab_instance = pydglab.dglab()
@@ -47,16 +51,26 @@ async def _():
 asyncio.run(_())
 ```
 
+#### 对于郊狼3.0
+
+```python
+import asyncio
+import pydglab
+from pydglab import model_v3
+
+async def _():
+    dglab_instance = pydglab.dglab_v3()
+    await dglab_instance.create()
+    # Do whatever u want here
+
+asyncio.run(_())
+```
+
 ## 文档
 
- 请查阅demo.py来获取更多信息。
+ 请查阅demo_v2.py或demo_v3.py（取决于你所连接的设备是郊狼2.0还是3.0）来获取更多信息。
 
  由于作者懒得写独立的文档了，因此关于模块的调用问题，请查阅内嵌的文档字符串(DocStrings)。
 
- 目前仅支持郊狼2.0。
+ 目前已支持郊狼2.0与3.0！
 
- 3.0的支持是实验性的，对3.0的正式支持将在几天内更新，请查阅[fork](https://github.com/shilapi/DGLAB-python-driver/tree/v3)。
-
-## 接下来可能会实现的功能
-
-- 让郊狼2.0实现与郊狼3.0相同的websocket远控。
