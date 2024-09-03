@@ -9,6 +9,7 @@ import pydglab.bthandler_v3 as v3
 
 logger = logging.getLogger(__name__)
 
+
 class dglab(object):
     coyote = Coyote()
 
@@ -61,7 +62,7 @@ class dglab(object):
                     self.characteristics.characteristicEStimB = i
 
         elif CoyoteV3.serviceWrite in service and CoyoteV3.serviceNotify in service:
-            raise Exception("DGLAB v3.0 is not supported")
+            raise Exception("DGLAB v3.0 found, please use dglab_v3 instead")
         else:
             raise Exception(
                 "Unknown device (你自己看看你连的是什么jb设备)"
@@ -330,22 +331,30 @@ class dglab(object):
             try:
                 # logger.debug(f"Time elapsed: {time.time() - last_time}")
                 if time.time() - last_time >= 0.1:
-                    
+
                     # Record time for loop
                     last_time = time.time()
-                    
+
                     # Refresh A and B channel by turn
 
                     if self.coyote.ChannelA.strength == 0:
-                        r = (0,0,0), await v2.set_wave_(self.client, self.coyote.ChannelB, self.characteristics)
+                        r = (0, 0, 0), await v2.set_wave_(
+                            self.client, self.coyote.ChannelB, self.characteristics
+                        )
                     elif self.coyote.ChannelB.strength == 0:
-                        r = await v2.set_wave_(self.client, self.coyote.ChannelA, self.characteristics), (0,0,0)
+                        r = await v2.set_wave_(
+                            self.client, self.coyote.ChannelA, self.characteristics
+                        ), (0, 0, 0)
                     else:
                         if last_refreshing == ChannelA:
-                            r = (0,0,0), await v2.set_wave_(self.client, self.coyote.ChannelB, self.characteristics)
+                            r = (0, 0, 0), await v2.set_wave_(
+                                self.client, self.coyote.ChannelB, self.characteristics
+                            )
                             last_refreshing = ChannelB
                         elif last_refreshing == ChannelB:
-                            r = await v2.set_wave_(self.client, self.coyote.ChannelA, self.characteristics), (0,0,0)
+                            r = await v2.set_wave_(
+                                self.client, self.coyote.ChannelA, self.characteristics
+                            ), (0, 0, 0)
                             last_refreshing = ChannelA
                     logger.debug(f"Set wave response: {r}")
                     logger.debug(f"Time elapsed: {time.time() - last_time_local}")
@@ -408,7 +417,7 @@ class dglab_v3(object):
         service = [service.uuid for service in services]
         logger.debug(f"Got services: {str(service)}")
         if CoyoteV2.serviceBattery in service and CoyoteV2.serviceEStim in service:
-            raise Exception("Use dglab_v2 instead")
+            raise Exception("DGLAB v2.0 found, please use dglab instead")
         elif CoyoteV3.serviceWrite in service and CoyoteV3.serviceNotify in service:
             logger.info("Connected to DGLAB v3.0")
 
@@ -439,7 +448,7 @@ class dglab_v3(object):
         self.coyote.ChannelB.coefficientStrenth = 100
         self.coyote.ChannelA.coefficientFrequency = 100
         self.coyote.ChannelB.coefficientFrequency = 100
-        
+
         await self.set_coefficient(200, 100, 100, ChannelA)
         await self.set_coefficient(200, 100, 100, ChannelB)
         await self.set_wave_sync(0, 0, 0, 0, 0, 0)
@@ -517,7 +526,13 @@ class dglab_v3(object):
             else self.coyote.ChannelB.strength
         )
 
-    async def set_coefficient(self, strength_limit: int, strength_coefficient: int, frequency_coefficient: int, channel: ChannelA | ChannelB) -> None:
+    async def set_coefficient(
+        self,
+        strength_limit: int,
+        strength_coefficient: int,
+        frequency_coefficient: int,
+        channel: ChannelA | ChannelB,
+    ) -> None:
         """
         设置强度上线与平衡常数。
         Set the strength limit and coefficient of the device.
@@ -540,13 +555,21 @@ class dglab_v3(object):
             self.coyote.ChannelB.limit = strength_limit
             self.coyote.ChannelB.coefficientStrenth = strength_coefficient
             self.coyote.ChannelB.coefficientFrequency = frequency_coefficient
-        
+
         await v3.write_coefficient_(self.client, self.coyote, self.characteristics)
-        
+
         return (
-            (self.coyote.ChannelA.limit, self.coyote.ChannelA.coefficientStrenth, self.coyote.ChannelA.coefficientFrequency)
+            (
+                self.coyote.ChannelA.limit,
+                self.coyote.ChannelA.coefficientStrenth,
+                self.coyote.ChannelA.coefficientFrequency,
+            )
             if channel is ChannelA
-            else (self.coyote.ChannelB.limit, self.coyote.ChannelB.coefficientStrenth, self.coyote.ChannelB.coefficientFrequency)
+            else (
+                self.coyote.ChannelB.limit,
+                self.coyote.ChannelB.coefficientStrenth,
+                self.coyote.ChannelB.coefficientFrequency,
+            )
         )
 
     async def set_strength_sync(self, strengthA: int, strengthB: int) -> None:
@@ -683,7 +706,7 @@ class dglab_v3(object):
         self.channelB_wave_set = [(waveX_B, waveY_B, waveZ_B)]
         return (waveX_A, waveY_A, waveZ_A), (waveX_B, waveY_B, waveZ_B)
 
-    def _channelA_wave_set_handler(self) -> None:
+    def _channelA_wave_set_handler(self):
         """
         Do not use this function directly.
 
@@ -694,15 +717,15 @@ class dglab_v3(object):
             while True:
                 for wave in self.channelA_wave_set:
                     wave = self.waveset_converter(wave)
-                    self.coyote.ChannelA.wave.insert(0,wave[0])
+                    self.coyote.ChannelA.wave.insert(0, wave[0])
                     self.coyote.ChannelA.wave.pop()
-                    self.coyote.ChannelA.waveStrenth.insert(0,wave[1])
+                    self.coyote.ChannelA.waveStrenth.insert(0, wave[1])
                     self.coyote.ChannelA.waveStrenth.pop()
-                    yield(None)
+                    yield (None)
         except asyncio.exceptions.CancelledError:
             pass
 
-    def _channelB_wave_set_handler(self) -> None:
+    def _channelB_wave_set_handler(self):
         """
         Do not use this function directly.
 
@@ -713,11 +736,11 @@ class dglab_v3(object):
             while True:
                 for wave in self.channelB_wave_set:
                     wave = self.waveset_converter(wave)
-                    self.coyote.ChannelB.wave.insert(0,wave[0])
+                    self.coyote.ChannelB.wave.insert(0, wave[0])
                     self.coyote.ChannelB.wave.pop()
-                    self.coyote.ChannelB.waveStrenth.insert(0,wave[1])
+                    self.coyote.ChannelB.waveStrenth.insert(0, wave[1])
                     self.coyote.ChannelB.waveStrenth.pop()
-                    yield(None)
+                    yield (None)
         except asyncio.exceptions.CancelledError:
             pass
 
@@ -727,20 +750,24 @@ class dglab_v3(object):
         """
         ChannelA_keeping = self._channelA_wave_set_handler()
         ChannelB_keeping = self._channelB_wave_set_handler()
-        
+
         last_time = time.time()
-        
+
         while True:
             if time.time() - last_time >= 0.1:
-                
+
                 # Record time for loop
                 last_time = time.time()
-                logger.debug(f"Using wave: {self.coyote.ChannelA.wave}, {self.coyote.ChannelA.waveStrenth}, {self.coyote.ChannelB.wave}, {self.coyote.ChannelB.waveStrenth}")
-                r = await v3.write_strenth_(self.client, self.coyote, self.characteristics)
+                logger.debug(
+                    f"Using wave: {self.coyote.ChannelA.wave}, {self.coyote.ChannelA.waveStrenth}, {self.coyote.ChannelB.wave}, {self.coyote.ChannelB.waveStrenth}"
+                )
+                r = await v3.write_strenth_(
+                    self.client, self.coyote, self.characteristics
+                )
                 logger.debug(f"Retainer response: {r}")
                 next(ChannelA_keeping)
                 next(ChannelB_keeping)
-        
+
         return None
 
     async def close(self) -> None:

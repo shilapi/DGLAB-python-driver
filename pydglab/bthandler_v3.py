@@ -42,7 +42,9 @@ async def notify_(client: BleakClient, characteristics: CoyoteV3, callback: call
     await client.start_notify(characteristics.characteristicNotify, callback)
 
 
-async def write_strenth_(client: BleakClient, value: Coyote_v3, characteristics: CoyoteV3):
+async def write_strenth_(
+    client: BleakClient, value: Coyote_v3, characteristics: CoyoteV3
+):
     struct = (
         0xB0,
         0b00010000 + 0b00001111,
