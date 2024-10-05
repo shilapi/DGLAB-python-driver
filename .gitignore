@@ -156,3 +156,6 @@ cython_debug/
 
 # Testcase for personal use
 test/
+
+# history
+.history/
