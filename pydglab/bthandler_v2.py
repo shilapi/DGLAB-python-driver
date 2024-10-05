@@ -57,7 +57,7 @@ async def set_strength_(
 ):
     # Create a byte array with the strength values.
     # The values are multiplied by 11 to convert them to the correct range.
-    # It seems that the multiplier is 2047, but the range is 0-200, so we divide by 2047 and multiply by
+    # It seems that the max value is 2047, but the range is 0-200, so we divide by 2047 and multiply by
     strengthA = int(int(value.ChannelA.strength) * 2047 / 200)
     strengthB = int(int(value.ChannelB.strength) * 2047 / 200)
     if (
